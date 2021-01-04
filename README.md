@@ -1,5 +1,21 @@
 <img src="https://user-images.githubusercontent.com/1687847/82130498-8c3eac80-97d4-11ea-9e88-372ab9c50295.png" width="80">
 
+# Build notes - 2021-01-02 (FB)
+
+Using VS 2019 (16.8.3) & .NET fw 4.6.2
+
+Installed Wix311 + VS wix toolset plugin
+https://marketplace.visualstudio.com/items?itemName=WixToolset.WixToolsetVisualStudio2019Extension
+
+Enabled Powershell exec:
+https://www.tenforums.com/tutorials/54585-change-powershell-script-execution-policy-windows-10-a.html
+Added nuget Microsoft.Windows.SDK.Contracts ref to QuickLook
+Removed dup ref (it complained about 4.5 & 4.6) System.Runtime.WindowsRuntime.dll from QuickLook
+
+Upgraded packages.config to PackageReference:
+https://stackoverflow.com/questions/60581121/how-to-add-a-reference-to-the-windows-applicationmodel-datatransfer-namespace-in
+
+
 # QuickLook
 
 [![license](https://img.shields.io/github/license/QL-Win/QuickLook.svg)](https://www.gnu.org/licenses/gpl-3.0.en.html)
