@@ -28,6 +28,18 @@ using QuickLook.Common.Helpers;
 
 namespace QuickLook.Plugin.FolderViewer
 {
+    struct DirAndLevel
+    {
+        public DirectoryInfo dir;
+        public int level;
+
+        public DirAndLevel(DirectoryInfo dir, int level)
+        {
+            this.dir = dir;
+            this.level = level;
+        }
+    };
+
     /// <summary>
     ///     Interaction logic for FolderInfoPanel.xaml
     /// </summary>
@@ -108,9 +120,11 @@ namespace QuickLook.Plugin.FolderViewer
     out long totalSize)
         {
             totalDirs = totalFiles = totalSize = 0L;
+            // only populate data for tree view this deep; totals go all the way down
+            const int MAX_LEVEL = 4;
 
-            var stack = new Stack<DirectoryInfo>();
-            stack.Push(new DirectoryInfo(root));
+            var stack = new Stack<DirAndLevel>();
+            stack.Push(new DirAndLevel(new DirectoryInfo(root), MAX_LEVEL));
 
             do
             {
@@ -121,36 +135,43 @@ namespace QuickLook.Plugin.FolderViewer
 
                 try
                 {
-                    _fileEntries.TryGetValue(pos.FullName, out var fileParent);
+                    _fileEntries.TryGetValue(pos.dir.FullName, out var fileParent);
 
                     // process files in current directory
-                    foreach (var file in pos.EnumerateFiles())
+                    foreach (var file in pos.dir.EnumerateFiles())
                     {
                         totalFiles++;
                         totalSize += file.Length;
 
-                        _fileEntries.Add(file.FullName, new FileEntry(file.Name, false, fileParent)
+                        if (pos.level >= 0)
                         {
-                            Size = (ulong)file.Length,
-                            ModifiedDate = file.LastWriteTime,
-                            FullPath = file.FullName
-                        }); ;
-
+                            _fileEntries.Add(file.FullName, new FileEntry(file.Name, false, fileParent)
+                            {
+                                Size = (ulong)file.Length,
+                                ModifiedDate = file.LastWriteTime,
+                                FullPath = file.FullName,
+                                Level = pos.level
+                            });
+                        }
                     }
 
                     // then push all sub-directories
-                    foreach (var dir in pos.EnumerateDirectories())
+                    foreach (var dir in pos.dir.EnumerateDirectories())
                     {
                         totalDirs++;
-                        stack.Push(dir);
+                        stack.Push(new DirAndLevel(dir, pos.level - 1));
 
-                        _fileEntries.TryGetValue(GetDirectoryName(dir.FullName), out var parent);
-
-                        var afe = new FileEntry(dir.Name, true, parent)
+                        if (pos.level >= 0)
                         {
-                            FullPath = dir.FullName
-                        };
-                        _fileEntries.Add(dir.FullName, afe);
+                            _fileEntries.TryGetValue(GetDirectoryName(dir.FullName), out var parent);
+
+                            var afe = new FileEntry(dir.Name, true, parent)
+                            {
+                                FullPath = dir.FullName,
+                                Level = pos.level
+                            };
+                            _fileEntries.Add(dir.FullName, afe);
+                        }
                     }
                 }
                 catch (Exception)
