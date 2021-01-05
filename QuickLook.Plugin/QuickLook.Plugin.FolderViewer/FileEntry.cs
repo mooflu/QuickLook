@@ -41,6 +41,7 @@ namespace QuickLook.Plugin.FolderViewer
         public ulong Size { get; set; }
         public DateTime ModifiedDate { get; set; }
         public string FullPath { get; set; }
+        public int Level { get; set; }
 
         public int CompareTo(FileEntry other)
         {
