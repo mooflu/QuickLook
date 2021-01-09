@@ -27,6 +27,7 @@ using ICSharpCode.AvalonEdit;
 using ICSharpCode.AvalonEdit.Document;
 using ICSharpCode.AvalonEdit.Highlighting;
 using ICSharpCode.AvalonEdit.Rendering;
+using ICSharpCode.AvalonEdit.Search;
 using QuickLook.Common.Helpers;
 using QuickLook.Common.Plugin;
 using UtfUnknown;
@@ -66,6 +67,7 @@ namespace QuickLook.Plugin.TextViewer
             FontFamily = new FontFamily(TranslationHelper.Get("Editor_FontFamily"));
 
             TextArea.TextView.ElementGenerators.Add(new TruncateLongLines());
+            SearchPanel.Install(TextArea);
 
             LoadFileAsync(path);
         }
