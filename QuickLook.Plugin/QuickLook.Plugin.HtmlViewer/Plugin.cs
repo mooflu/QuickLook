@@ -21,17 +21,61 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Threading;
 using QuickLook.Common.Plugin;
+using QuickLook.Common.Helpers;
 
 namespace QuickLook.Plugin.HtmlViewer
 {
-    public class Plugin : IViewer
+    internal class WebviewPluginImpl : IViewer
     {
+        public int Priority => 0;
+        private static readonly string[] Extensions = { ".mht", ".mhtml", ".htm", ".html", ".svg", ".txt", ".pdf" };
+        private static readonly string[] SupportedProtocols = { "http", "https" };
+
+        private BrowserPanel _panel;
+
+        public void Init()
+        {
+        }
+
+        public bool CanHandle(string path)
+        {
+            return !Directory.Exists(path) && (Extensions.Any(path.ToLower().EndsWith) || (path.ToLower().EndsWith(".url") && SupportedProtocols.Contains(Helper.GetUrlPath(path).Split(':')[0].ToLower())));
+        }
+
+        public void Prepare(string path, ContextObject context)
+        {
+            var desiredSize = new Size(1200, 1600);
+            context.SetPreferredSizeFit(desiredSize, 0.8);
+        }
+
+        public void View(string path, ContextObject context)
+        {
+            _panel = new BrowserPanel();
+            context.ViewerContent = _panel;
+            context.Title = Path.IsPathRooted(path) ? Path.GetFileName(path) : path;
+
+            if (path.ToLower().EndsWith(".url"))
+            {
+                path = Helper.GetUrlPath(path);
+            }
+            _panel.LoadFile(path);
+            _panel.Dispatcher.Invoke(() => { context.IsBusy = false; }, DispatcherPriority.Loaded);
+        }
+
+        public void Cleanup()
+        {
+            _panel?.Dispose();
+            _panel = null;
+        }
+
+    }
+    internal class OldWebpagePluginImpl : IViewer
+    {
+        public int Priority => 0;
         private static readonly string[] Extensions = { ".mht", ".mhtml", ".htm", ".html" };
         private static readonly string[] SupportedProtocols = { "http", "https" };
 
         private WebpagePanel _panel;
-
-        public int Priority => 0;
 
         public void Init()
         {
@@ -66,6 +110,46 @@ namespace QuickLook.Plugin.HtmlViewer
         {
             _panel?.Dispose();
             _panel = null;
+        }
+    }
+    public class Plugin : IViewer
+    {
+        public int Priority => 0;
+        private static IViewer _impl;
+
+        public void Init()
+        {
+            var useOldViewer = SettingHelper.Get("useOldViewer", false);
+            if (useOldViewer)
+            {
+                _impl = new OldWebpagePluginImpl();
+            } 
+            else
+            {
+                _impl = new WebviewPluginImpl();
+
+            }
+            _impl.Init();
+        }
+
+        public bool CanHandle(string path)
+        {
+            return _impl.CanHandle(path);
+        }
+
+        public void Prepare(string path, ContextObject context)
+        {
+            _impl.Prepare(path, context);
+        }
+
+        public void View(string path, ContextObject context)
+        {
+            _impl.View(path, context);
+        }
+
+        public void Cleanup()
+        {
+            _impl.Cleanup();
         }
     }
 }
