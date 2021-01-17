@@ -37,6 +37,7 @@ namespace QuickLook
         private Size _customWindowSize = Size.Empty;
         private bool _ignoreNextWindowSizeChange;
         private string _path = string.Empty;
+        private static Point _lastCenter = new Point(-1,-1);
 
         internal ViewerWindow()
         {

@@ -68,7 +68,41 @@ namespace QuickLook
 
             size = new Size(Math.Max(MinWidth, size.Width), Math.Max(MinHeight, size.Height));
 
-            var newRect = IsLoaded ? ResizeAndCentreExistingWindow(size) : ResizeAndCentreNewWindow(size);
+            // preferred size is non-scaled; scale it
+            var scale = DpiHelper.GetScaleFactorFromWindow(this);
+            var scaledSize = new Size(scale.Horizontal * size.Width, scale.Vertical * size.Height);
+
+            var desktopRect = WindowHelper.GetCurrentDesktopRectInPixel();
+            scaledSize.Width = Math.Min(scaledSize.Width, desktopRect.Width * 0.8);
+            scaledSize.Height = Math.Min(scaledSize.Height, desktopRect.Height * 0.8);
+
+            if (_lastCenter.X < 0 || _lastCenter.Y < 0)
+            {
+                _lastCenter = new Point((desktopRect.X + desktopRect.Width) / 2, (desktopRect.Y + desktopRect.Height) / 2);
+            }
+
+            var padding = new Size(20, 20);
+
+            // if any portion would end up off screen or in the padding area, try to make window fully visible
+            if (_lastCenter.X + (scaledSize.Width / 2) > (desktopRect.Width - padding.Width))
+            {
+                _lastCenter.X = desktopRect.Width - (scaledSize.Width / 2) - padding.Width;
+            }
+            if (_lastCenter.X - (scaledSize.Width / 2) < padding.Width)
+            {
+                _lastCenter.X = (scaledSize.Width / 2) + padding.Width;
+            }
+            if (_lastCenter.Y + (scaledSize.Height / 2) > (desktopRect.Height - padding.Height))
+            {
+                _lastCenter.Y = desktopRect.Height - (scaledSize.Height / 2) - padding.Height;
+            }
+            if (_lastCenter.Y - (scaledSize.Height / 2) < padding.Height)
+            {
+                _lastCenter.Y = (scaledSize.Height / 2) + padding.Height;
+            }
+
+            var topLeft = new Point(_lastCenter.X - scaledSize.Width / 2, _lastCenter.Y - scaledSize.Height / 2);
+            var newRect = new Rect(topLeft, scaledSize);
 
             this.MoveWindow(newRect.Left, newRect.Top, newRect.Width, newRect.Height);
         }
@@ -146,6 +180,12 @@ namespace QuickLook
 
         internal void UnloadPlugin()
         {
+            if (Plugin != null)
+            {
+                var winRect = this.GetWindowRectInPixel();
+                _lastCenter = new Point(winRect.X + winRect.Width / 2, winRect.Y + winRect.Height / 2);
+            }
+
             // the focused element will not processed by GC: https://stackoverflow.com/questions/30848939/memory-leak-due-to-window-efectivevalues-retention
             FocusManager.SetFocusedElement(this, null);
             Keyboard.DefaultRestoreFocusMode =
