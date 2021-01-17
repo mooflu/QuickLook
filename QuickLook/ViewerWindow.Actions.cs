@@ -67,42 +67,52 @@ namespace QuickLook
                 return;
 
             size = new Size(Math.Max(MinWidth, size.Width), Math.Max(MinHeight, size.Height));
+            Rect desktopRect;
 
-            // preferred size is non-scaled; scale it
-            var scale = DpiHelper.GetScaleFactorFromWindow(this);
-            var scaledSize = new Size(scale.Horizontal * size.Width, scale.Vertical * size.Height);
+            if (!IsLoaded)
+            {
+                // preferred size is non-scaled; scale it
+                var scale = DpiHelper.GetScaleFactorFromWindow(this);
+                size = new Size(scale.Horizontal * size.Width, scale.Vertical * size.Height);
+                desktopRect = WindowHelper.GetCurrentDesktopRectInPixel();
+            }
+            else
+            {
+                desktopRect = WindowHelper.GetDesktopRectFromWindowInPixel(this);
+            }
 
-            var desktopRect = WindowHelper.GetCurrentDesktopRectInPixel();
-            scaledSize.Width = Math.Min(scaledSize.Width, desktopRect.Width * 0.8);
-            scaledSize.Height = Math.Min(scaledSize.Height, desktopRect.Height * 0.8);
+            size.Width = Math.Min(size.Width, desktopRect.Width * 0.8);
+            size.Height = Math.Min(size.Height, desktopRect.Height * 0.8);
 
             if (_lastCenter.X < 0 || _lastCenter.Y < 0)
             {
-                _lastCenter = new Point((desktopRect.X + desktopRect.Width) / 2, (desktopRect.Y + desktopRect.Height) / 2);
+                _lastCenter = new Point(desktopRect.Left + (desktopRect.Width / 2), desktopRect.Top + (desktopRect.Height / 2));
             }
 
             var padding = new Size(20, 20);
+            var halfHeight = size.Height / 2;
+            var halfWidth = size.Width / 2;
 
             // if any portion would end up off screen or in the padding area, try to make window fully visible
-            if (_lastCenter.X + (scaledSize.Width / 2) > (desktopRect.Width - padding.Width))
+            if (_lastCenter.X + halfWidth > desktopRect.Right - padding.Width)
             {
-                _lastCenter.X = desktopRect.Width - (scaledSize.Width / 2) - padding.Width;
+                _lastCenter.X = desktopRect.Right - padding.Width - halfWidth;
             }
-            if (_lastCenter.X - (scaledSize.Width / 2) < padding.Width)
+            if (_lastCenter.X - halfWidth < desktopRect.Left + padding.Width)
             {
-                _lastCenter.X = (scaledSize.Width / 2) + padding.Width;
+                _lastCenter.X = desktopRect.Left + padding.Width + halfWidth;
             }
-            if (_lastCenter.Y + (scaledSize.Height / 2) > (desktopRect.Height - padding.Height))
+            if (_lastCenter.Y + halfHeight > desktopRect.Bottom - padding.Height)
             {
-                _lastCenter.Y = desktopRect.Height - (scaledSize.Height / 2) - padding.Height;
+                _lastCenter.Y = desktopRect.Bottom - padding.Height - halfHeight;
             }
-            if (_lastCenter.Y - (scaledSize.Height / 2) < padding.Height)
+            if (_lastCenter.Y - halfHeight < desktopRect.Top + padding.Height)
             {
-                _lastCenter.Y = (scaledSize.Height / 2) + padding.Height;
+                _lastCenter.Y = desktopRect.Top + padding.Height + halfHeight;
             }
 
-            var topLeft = new Point(_lastCenter.X - scaledSize.Width / 2, _lastCenter.Y - scaledSize.Height / 2);
-            var newRect = new Rect(topLeft, scaledSize);
+            var topLeft = new Point(_lastCenter.X - halfWidth, _lastCenter.Y - halfHeight);
+            var newRect = new Rect(topLeft, size);
 
             this.MoveWindow(newRect.Left, newRect.Top, newRect.Width, newRect.Height);
         }
@@ -183,7 +193,8 @@ namespace QuickLook
             if (Plugin != null)
             {
                 var winRect = this.GetWindowRectInPixel();
-                _lastCenter = new Point(winRect.X + winRect.Width / 2, winRect.Y + winRect.Height / 2);
+                var scale = DpiHelper.GetScaleFactorFromWindow(this);
+                _lastCenter = new Point(winRect.X + winRect.Width / scale.Horizontal / 2, winRect.Y + winRect.Height / scale.Vertical / 2);
             }
 
             // the focused element will not processed by GC: https://stackoverflow.com/questions/30848939/memory-leak-due-to-window-efectivevalues-retention
