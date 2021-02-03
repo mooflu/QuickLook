@@ -39,6 +39,21 @@ namespace QuickLook.Plugin.FolderViewer
                 return false;
 
             _isDirectory = Directory.Exists(path);
+            if (_isDirectory)
+            {
+                var driveType = GetDriveType(path);
+                switch (driveType)
+                {
+                    // skip slow drives
+                    // case DriveType.Removable:
+                    case DriveType.CDRom:
+                    case DriveType.Network:
+                        return false;
+
+                    default:
+                        break;
+                }
+            }
             return _isDirectory;
         }
 
@@ -64,6 +79,19 @@ namespace QuickLook.Plugin.FolderViewer
             _panel.Stop = true;
             _panel?.Dispose();
             _panel = null;
+        }
+
+        private static DriveType GetDriveType(string path)
+        {
+            if (path.StartsWith(@"\\", StringComparison.OrdinalIgnoreCase))
+                return DriveType.Network;
+
+            var dirInfo = new DirectoryInfo(path);
+            char driveChar = dirInfo.FullName[0];
+            string driveName = new string(driveChar, 1);
+
+            DriveInfo driveInfo = new DriveInfo(driveName);
+            return driveInfo.DriveType;
         }
     }
 }
