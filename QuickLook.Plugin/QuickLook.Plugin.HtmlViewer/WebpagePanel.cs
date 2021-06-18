@@ -51,6 +51,7 @@ namespace QuickLook.Plugin.HtmlViewer
     {
         private Uri _currentUri;
         private WebView2 _webView;
+
         private FileProps _fileProps = new FileProps();
         private string nextPath = null;
 

@@ -34,7 +34,7 @@ namespace QuickLook
 
         internal ViewWindowManager()
         {
-            _viewerWindow = new ViewerWindow();
+            InitNewViewerWindow();
         }
 
         public void Dispose()
@@ -52,7 +52,7 @@ namespace QuickLook
             if (focus != NativeMethods.QuickLook.FocusedWindowType.Invalid)
             {
                 StopFocusMonitor();
-                _viewerWindow.BeginHide();
+                _viewerWindow.Close();
                 return;
             }
 
@@ -61,7 +61,7 @@ namespace QuickLook
                 return;
 
             StopFocusMonitor();
-            _viewerWindow.RunAndHide();
+            _viewerWindow.RunAndClose();
         }
 
         public void ClosePreview()
@@ -70,7 +70,7 @@ namespace QuickLook
                 return;
 
             StopFocusMonitor();
-            _viewerWindow.BeginHide();
+            _viewerWindow.Close();
         }
 
         public void TogglePreview(string path = null)
@@ -100,9 +100,7 @@ namespace QuickLook
 
             _viewerWindow.Pinned = true;
 
-            var newWindow = new ViewerWindow();
-
-            _viewerWindow = newWindow;
+            InitNewViewerWindow();
         }
 
         public void SwitchPreview(string path = null)
@@ -153,7 +151,7 @@ namespace QuickLook
         {
             var plugin = _viewerWindow.Plugin?.GetType();
 
-            _viewerWindow.BeginHide();
+            _viewerWindow.Close();
 
             TrayIconManager.ShowNotification($"Failed to preview {Path.GetFileName(path)}",
                 "Consider reporting this incident to QuickLook’s author.", true);
@@ -166,6 +164,20 @@ namespace QuickLook
                 BeginShowNewWindow(path, PluginManager.GetInstance().DefaultPlugin);
             else
                 e.Throw();
+        }
+
+        private void InitNewViewerWindow()
+        {
+            _viewerWindow = new ViewerWindow();
+            _viewerWindow.Closed += (sender, e) =>
+            {
+                if (ProcessHelper.IsShuttingDown())
+                    return;
+                if (!(sender is ViewerWindow w) || w.Pinned)
+                    return; // Pinned window has already been forgotten
+                StopFocusMonitor();
+                InitNewViewerWindow();
+            };
         }
 
         internal static ViewWindowManager GetInstance()

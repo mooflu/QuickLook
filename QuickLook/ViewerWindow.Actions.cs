@@ -16,6 +16,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 using System;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.ExceptionServices;
@@ -48,16 +49,10 @@ namespace QuickLook
             }
         }
 
-        internal void RunAndHide()
-        {
-            Run();
-            BeginHide();
-        }
-
         internal void RunAndClose()
         {
             Run();
-            BeginClose();
+            Close();
         }
 
         private void PositionWindow(Size size)
@@ -311,33 +306,12 @@ namespace QuickLook
             buttonOpen.ToolTip = string.Format(TranslationHelper.Get("MW_Open"), Path.GetFileName(_path));
         }
 
-        internal void BeginHide()
-        {
-            // reset custom window size
-            _customWindowSize = Size.Empty;
-            _ignoreNextWindowSizeChange = true;
-
-            UnloadPlugin();
-
-            // if the this window is hidden in Max state, new show() will results in failure:
-            // "Cannot show Window when ShowActivated is false and WindowState is set to Maximized"
-            //WindowState = WindowState.Normal;
-
-            Hide();
-            //Dispatcher.BeginInvoke(new Action(Hide), DispatcherPriority.ApplicationIdle);
-
-            ViewWindowManager.GetInstance().ForgetCurrentWindow();
-            BeginClose();
-
-            ProcessHelper.PerformAggressiveGC();
-        }
-
-        internal void BeginClose()
+        protected override void OnClosing(CancelEventArgs e)
         {
             UnloadPlugin();
             busyDecorator.Dispose();
 
-            Close();
+            base.OnClosing(e);
 
             ProcessHelper.PerformAggressiveGC();
         }
