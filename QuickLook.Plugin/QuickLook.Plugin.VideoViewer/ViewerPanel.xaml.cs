@@ -70,7 +70,7 @@ namespace QuickLook.Plugin.VideoViewer
             mediaElement.MediaEnded += MediaEnded;
             mediaElement.MediaFailed += MediaFailed;
 
-            ShouldLoop = SettingHelper.Get("ShouldLoop", false);
+            ShouldLoop = SettingHelper.Get("ShouldLoop", false, "QuickLook.Plugin.VideoViewer");
 
             buttonPlayPause.Click += TogglePlayPause;
             buttonLoop.Click += ToggleShouldLoop;
@@ -145,8 +145,8 @@ namespace QuickLook.Plugin.VideoViewer
         public void Dispose()
         {
             // old plugin use an int-typed "Volume" config key ranged from 0 to 100. Let's use a new one here.
-            SettingHelper.Set("VolumeDouble", LinearVolume);
-            SettingHelper.Set("ShouldLoop", ShouldLoop);
+            SettingHelper.Set("VolumeDouble", LinearVolume, "QuickLook.Plugin.VideoViewer");
+            SettingHelper.Set("ShouldLoop", ShouldLoop, "QuickLook.Plugin.VideoViewer");
 
             try
             {
@@ -330,15 +330,18 @@ namespace QuickLook.Plugin.VideoViewer
         public void LoadAndPlay(string path, MediaInfo.MediaInfo info)
         {
             UpdateMeta(path, info);
-            
+
             // detect rotation
             double.TryParse(info?.Get(StreamKind.Video, 0, "Rotation"), out var rotation);
+            // Correct rotation: on some machine the value "90" becomes "90000" by some reason
+            if (rotation > 360)
+                rotation /= 1e3;
             if (Math.Abs(rotation) > 0.1)
                 mediaElement.LayoutTransform = new RotateTransform(rotation, 0.5, 0.5);
 
             mediaElement.Source = new Uri(path);
             // old plugin use an int-typed "Volume" config key ranged from 0 to 100. Let's use a new one here.
-            LinearVolume = SettingHelper.Get("VolumeDouble", 1d);
+            LinearVolume = SettingHelper.Get("VolumeDouble", 1d, "QuickLook.Plugin.VideoViewer");
 
             mediaElement.Play();
         }

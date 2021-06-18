@@ -28,6 +28,12 @@ namespace QuickLook.Plugin.ImageViewer
 {
     public class Plugin : IViewer
     {
+        private static readonly HashSet<string> WellKnownImageExtensions = new HashSet<string>(new[]
+        {
+            ".apng", ".bmp", ".gif", ".ico", ".icon", ".jfif", ".jpeg", ".jpg", ".png", ".psd",
+            ".svg", ".tga", ".tif", ".tiff", ".webp", ".wmf",
+        });
+
         private ImagePanel _ip;
         private MetaProvider _meta;
 
@@ -42,14 +48,19 @@ namespace QuickLook.Plugin.ImageViewer
                 new KeyValuePair<string[], Type>(new[] {".gif"},
                     typeof(GifProvider)));
             AnimatedImage.AnimatedImage.Providers.Add(
-                new KeyValuePair<string[], Type>(new[] {".bmp", ".jpg", ".jpeg", ".tif", ".tiff"},
+                new KeyValuePair<string[], Type>(new[] {".bmp", ".jpg", ".jpeg", ".jfif", ".tif", ".tiff"},
                     typeof(NativeProvider)));
             AnimatedImage.AnimatedImage.Providers.Add(
                 new KeyValuePair<string[], Type>(new[] {"*"},
                     typeof(ImageMagickProvider)));
         }
 
-        private bool IsKnownImageFormat(string path)
+        private bool IsWellKnownImageExtension(string path)
+        {
+            return WellKnownImageExtensions.Contains(Path.GetExtension(path.ToLower()));
+        }
+
+        private bool IsImageMagickSupported(string path)
         {
             try
             {
@@ -63,7 +74,9 @@ namespace QuickLook.Plugin.ImageViewer
 
         public bool CanHandle(string path)
         {
-            return !Directory.Exists(path) && IsKnownImageFormat(path);
+            // Only check extension for well known image and animated image types.
+            // For other image formats, let ImageMagick try to detect by file content.
+            return !Directory.Exists(path) && (IsWellKnownImageExtension(path) || IsImageMagickSupported(path));
         }
 
         public void Prepare(string path, ContextObject context)
@@ -77,7 +90,7 @@ namespace QuickLook.Plugin.ImageViewer
             else
                 context.PreferredSize = new Size(800, 600);
 
-            context.Theme = (Themes) SettingHelper.Get("LastTheme", 1);
+            context.Theme = (Themes) SettingHelper.Get("LastTheme", 1, "QuickLook.Plugin.ImageViewer");
         }
 
         public void View(string path, ContextObject context)
@@ -90,7 +103,7 @@ namespace QuickLook.Plugin.ImageViewer
                 ? $"{Path.GetFileName(path)}"
                 : $"{size.Width}×{size.Height}: {Path.GetFileName(path)}";
 
-            _ip.ImageUriSource = new Uri(path);
+            _ip.ImageUriSource = Helper.FilePathToFileUrl(path);
         }
 
         public void Cleanup()
