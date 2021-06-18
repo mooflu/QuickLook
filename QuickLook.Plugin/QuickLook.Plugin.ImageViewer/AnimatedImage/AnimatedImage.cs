@@ -50,10 +50,10 @@ namespace QuickLook.Plugin.ImageViewer.AnimatedImage
 
         private static AnimationProvider InitAnimationProvider(Uri path, MetaProvider meta)
         {
-            var ext = Path.GetExtension(path.LocalPath).ToLower();
+            var ext = Path.GetExtension(path.OriginalString).ToLower();
             var type = Providers.First(p => p.Key.Contains(ext) || p.Key.Contains("*")).Value;
 
-            var provider = type.CreateInstance<AnimationProvider>(path.LocalPath, meta);
+            var provider = type.CreateInstance<AnimationProvider>(path.OriginalString, meta);
 
             return provider;
         }

@@ -1,4 +1,4 @@
-// Copyright © 2017 Paddy Xu
+// Copyright © 2021 Paddy Xu and Frank Becker
 // 
 // This file is part of QuickLook program.
 // 
@@ -15,31 +15,36 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-using System;
 using System.IO;
 using System.Linq;
 using System.Windows;
 using System.Windows.Threading;
 using QuickLook.Common.Plugin;
-using QuickLook.Common.Helpers;
 
 namespace QuickLook.Plugin.HtmlViewer
 {
-    internal class WebviewPluginImpl : IViewer
+    public class Plugin : IViewer
     {
-        public int Priority => 0;
-        private static readonly string[] Extensions = { ".mht", ".mhtml", ".htm", ".html", ".svg", ".txt", ".pdf" };
-        private static readonly string[] SupportedProtocols = { "http", "https" };
+        private static readonly string[] Extensions =
+            "html,htm,mht,mhtml,pdf,csv,xlsx,svg,md,markdown,gltf,glb,c++,h++,bat,c,cmake,cpp,cs,css,go,h,hpp,java,js,json,jsx,lua,perl,pl,ps1,psm1,py,rb,sass,scss,sh,sql,tex,ts,tsx,txt,webp,yaml,yml".Split(',');
+            // {".mht", ".mhtml", ".htm", ".html"};
+        private static readonly string[] SupportedProtocols = {"http", "https"};
 
-        private BrowserPanel _panel;
+        private static WebpagePanel _panel;
+
+        public int Priority => 1;
 
         public void Init()
         {
+            _panel = new WebpagePanel();
         }
 
         public bool CanHandle(string path)
         {
-            return !Directory.Exists(path) && (Extensions.Any(path.ToLower().EndsWith) || (path.ToLower().EndsWith(".url") && SupportedProtocols.Contains(Helper.GetUrlPath(path).Split(':')[0].ToLower())));
+            return !Directory.Exists(path) && (Extensions.Any(path.ToLower().EndsWith) ||
+                                               path.ToLower().EndsWith(".url") &&
+                                               SupportedProtocols.Contains(Helper.GetUrlPath(path).Split(':')[0]
+                                                   .ToLower()));
         }
 
         public void Prepare(string path, ContextObject context)
@@ -50,106 +55,19 @@ namespace QuickLook.Plugin.HtmlViewer
 
         public void View(string path, ContextObject context)
         {
-            _panel = new BrowserPanel();
             context.ViewerContent = _panel;
             context.Title = Path.IsPathRooted(path) ? Path.GetFileName(path) : path;
 
             if (path.ToLower().EndsWith(".url"))
-            {
                 path = Helper.GetUrlPath(path);
-            }
-            _panel.LoadFile(path);
+            _panel.NavigateToFile(path);
             _panel.Dispatcher.Invoke(() => { context.IsBusy = false; }, DispatcherPriority.Loaded);
         }
 
         public void Cleanup()
         {
-            _panel?.Dispose();
-            _panel = null;
-        }
-
-    }
-    internal class OldWebpagePluginImpl : IViewer
-    {
-        public int Priority => 0;
-        private static readonly string[] Extensions = { ".mht", ".mhtml", ".htm", ".html" };
-        private static readonly string[] SupportedProtocols = { "http", "https" };
-
-        private WebpagePanel _panel;
-
-        public void Init()
-        {
-            Helper.SetBrowserFeatureControl();
-        }
-
-        public bool CanHandle(string path)
-        {
-            return !Directory.Exists(path) && (Extensions.Any(path.ToLower().EndsWith) || (path.ToLower().EndsWith(".url") && SupportedProtocols.Contains(Helper.GetUrlPath(path).Split(':')[0].ToLower())));
-        }
-
-        public void Prepare(string path, ContextObject context)
-        {
-            context.PreferredSize = new Size(1280, 720);
-        }
-
-        public void View(string path, ContextObject context)
-        {
-            _panel = new WebpagePanel();
-            context.ViewerContent = _panel;
-            context.Title = Path.IsPathRooted(path) ? Path.GetFileName(path) : path;
-
-            if (path.ToLower().EndsWith(".url"))
-            {
-                path = Helper.GetUrlPath(path);
-            }
-            _panel.LoadFile(path);
-            _panel.Dispatcher.Invoke(() => { context.IsBusy = false; }, DispatcherPriority.Loaded);
-        }
-
-        public void Cleanup()
-        {
-            _panel?.Dispose();
-            _panel = null;
-        }
-    }
-    public class Plugin : IViewer
-    {
-        public int Priority => 0;
-        private static IViewer _impl;
-
-        public void Init()
-        {
-            var useOldViewer = SettingHelper.Get("useOldViewer", false);
-            if (useOldViewer)
-            {
-                _impl = new OldWebpagePluginImpl();
-            } 
-            else
-            {
-                _impl = new WebviewPluginImpl();
-
-            }
-            _impl.Init();
-        }
-
-        public bool CanHandle(string path)
-        {
-            return _impl.CanHandle(path);
-        }
-
-        public void Prepare(string path, ContextObject context)
-        {
-            _impl.Prepare(path, context);
-        }
-
-        public void View(string path, ContextObject context)
-        {
-            _impl.View(path, context);
-        }
-
-        public void Cleanup()
-        {
-            _impl.Cleanup();
+            //_panel?.Dispose();
+            //_panel = null;
         }
     }
 }
