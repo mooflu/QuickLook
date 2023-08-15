@@ -30,7 +30,7 @@ jobs:
       with:
         submodules: recursive
         fetch-depth: 0
-        ref: master
+        ref: experimental
 
     - name: Add MSBuild to PATH
       uses: microsoft/setup-msbuild@v1.0.2
